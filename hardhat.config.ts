@@ -1,5 +1,4 @@
 import "dotenv/config";
-import "@tenderly/hardhat-tenderly";
 import "hardhat-contract-sizer";
 import "@openzeppelin/hardhat-upgrades";
 import {HardhatUserConfig} from "hardhat/types";
@@ -9,12 +8,12 @@ import "@nomiclabs/hardhat-etherscan";
 import "hardhat-gas-reporter";
 import "@typechain/hardhat";
 import "solidity-coverage";
-import "hardhat-deploy-tenderly";
 import "hardhat-preprocessor";
 import "hardhat-docgen";
 import {removeConsoleLog} from "hardhat-preprocessor";
 import {node_url, accounts, addForkConfiguration} from "./utils/network";
 import "hardhat-log-remover";
+import "@nomiclabs/hardhat-waffle";
 
 import {ChainName, getChainId} from "wido";
 
@@ -22,13 +21,26 @@ const chainId = process.env.HARDHAT_FORK ? getChainId(process.env.HARDHAT_FORK a
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.7",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 2000,
+    compilers: [
+      {
+        version: "0.8.7",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000,
+          },
+        },
       },
-    },
+      {
+        version: "0.5.0",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 2000,
+          },
+        },
+      },
+    ],
   },
   namedAccounts: {
     deployer: 0,
@@ -36,7 +48,7 @@ const config: HardhatUserConfig = {
   },
   networks: addForkConfiguration({
     hardhat: {
-      chainId: chainId,
+      //chainId: chainId,
       initialBaseFeePerGas: 0, // to fix : https://github.com/sc-forks/solidity-coverage/issues/652, see https://github.com/sc-forks/solidity-coverage/issues/652#issuecomment-896330136
     },
     localhost: {
@@ -122,13 +134,13 @@ const config: HardhatUserConfig = {
   },
   contractSizer: {
     alphaSort: true,
-    runOnCompile: true,
+    runOnCompile: false,
     disambiguatePaths: false,
   },
-  tenderly: {
+  /*   tenderly: {
     username: process.env.TENDERLY_USERNAME as string,
     project: "project",
-  },
+  }, */
   preprocess: {
     eachLine: removeConsoleLog((hre) => hre.network.name !== "hardhat" && hre.network.name !== "localhost"),
   },
