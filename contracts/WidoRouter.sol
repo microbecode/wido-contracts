@@ -230,7 +230,7 @@ contract WidoRouter is IWidoRouter, Ownable {
         Step[] calldata route,
         uint256 feeBps,
         address partner
-    ) external payable override returns (uint256 toTokenBalance) {
+    ) external  override returns (uint256 toTokenBalance) {
         require(msg.sender == order.user, "Invalid order user");
         toTokenBalance = _executeOrder(order, route, order.user, feeBps);
         emit FulfilledOrder(order, msg.sender, order.user, feeBps, partner);
@@ -249,7 +249,7 @@ contract WidoRouter is IWidoRouter, Ownable {
         address recipient,
         uint256 feeBps,
         address partner
-    ) external payable override returns (uint256 toTokenBalance) {
+    ) external override returns (uint256 toTokenBalance) {
         require(msg.sender == order.user, "Invalid order user");
         toTokenBalance = _executeOrder(order, route, recipient, feeBps);
         emit FulfilledOrder(order, msg.sender, recipient, feeBps, partner);

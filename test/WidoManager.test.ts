@@ -1,12 +1,13 @@
 //import {expect} from "./setup/chai-setup";
 
 import {ethers, deployments, getUnnamedAccounts} from "hardhat";
-import {ERC20, WidoRouter} from "../typechain";
+import {ERC20, WidoManager, WidoManager__factory, WidoRouter} from "../typechain";
 import {IWidoRouter} from "../typechain/contracts/WidoRouter";
 import {loadFixture} from "ethereum-waffle";
 import {MockERC20} from "../typechain/contracts/mock/MockERC20";
 import {WETH} from "../typechain/contracts/mock/WETH";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
+import {MockVault} from "../typechain/contracts/mock/MockVault";
 
 /* const setup = deployments.createFixture(async () => {
  await deployments.fixture(["WidoRouter", "USDC"]);
@@ -30,11 +31,16 @@ async function deployFixture() {
   const Router = await ethers.getContractFactory("WidoRouter");
   const _router = (await Router.connect(_deployer).deploy(_weth.address, _bank.address)) as WidoRouter;
 
+  const _manager = (await ethers.getContractAt(WidoManager__factory.abi, await _router.widoManager())) as WidoManager;
+
   const ERC20 = await ethers.getContractFactory("MockERC20");
   const _token1 = (await ERC20.connect(_deployer).deploy()) as MockERC20;
   const _token2 = (await ERC20.connect(_deployer).deploy()) as MockERC20;
 
-  return {_router, _token1, _token2, _deployer, _user1, _user2};
+  const Vault = await ethers.getContractFactory("MockVault");
+  const _vault = (await Vault.connect(_deployer).deploy(_token1.address)) as MockVault;
+
+  return {_router, _manager, _token1, _token2, _vault, _deployer, _user1, _user2};
 }
 
 const executeOrderFn =
@@ -46,18 +52,22 @@ describe(`WidoManager`, async () => {
   } */
 
   let router: WidoRouter,
+    manager: WidoManager,
     token1: MockERC20,
     token2: MockERC20,
+    vault: MockVault,
     deployer: SignerWithAddress,
     user1: SignerWithAddress,
     user2: SignerWithAddress;
 
   beforeEach(async function () {
-    const {_router, _token1, _token2, _deployer, _user1, _user2} = await loadFixture(deployFixture);
+    const {_router, _manager, _token1, _token2, _vault, _deployer, _user1, _user2} = await loadFixture(deployFixture);
 
     router = _router;
+    manager = _manager;
     token1 = _token1;
     token2 = _token2;
+    vault = _vault;
     deployer = _deployer;
     user1 = _user1;
     user2 = _user2;
@@ -71,66 +81,32 @@ describe(`WidoManager`, async () => {
   });
 
   it(`should not zap other people's funds`, async function () {
+    const amount = ethers.utils.parseUnits("1", 18);
+
+    await token1.connect(user1).freeMint(amount);
+    await token1.connect(user2).freeMint(amount);
+    await token2.connect(user1).freeMint(amount);
+    await token2.connect(user2).freeMint(amount);
+
+    await token1.connect(user1).approve(manager.address, ethers.constants.MaxUint256.toString());
+    await token1.connect(user2).approve(router.address, ethers.constants.MaxUint256.toString());
+
+    const data = vault.interface.encodeFunctionData("deposit", [amount]);
+
+    const swapRoute: IWidoRouter.StepStruct[] = [
+      {fromToken: token1.address, toToken: vault.address, targetAddress: vault.address, data, amountIndex: 4},
+    ];
+
     const order: IWidoRouter.OrderStruct = {
       user: user1.address,
       fromToken: token1.address,
-      toToken: token2.address,
-      fromTokenAmount: 1,
-      minToTokenAmount: 0,
+      toToken: vault.address,
+      fromTokenAmount: amount,
+      minToTokenAmount: "1",
       nonce: 0,
-      expiration: 1670827740,
+      expiration: 0,
     };
 
-    /*
-        address user;
-        address fromToken;
-        address toToken;
-        uint256 fromTokenAmount;
-        uint256 minToTokenAmount;
-        uint32 nonce;
-        uint32 expiration;
-*/
-
-    // arrange
-    /* const ETH = ZERO_ADDRESS;
-    const WETH = WETH_MAP.mainnet;
-    const USDC = USDC_MAP.mainnet;
-    const stolenAmount = String(100 * 1e6);
-
-    await utils.prepForToken(bob.address, USDC, stolenAmount);
-    await utils.approveForToken(await ethers.getSigner(bob.address), USDC, widoManagerAddr);
-    // act
-    const steps: IWidoRouter.StepStruct[] = [
-      {
-        fromToken: WETH,
-        toToken: USDC,
-        targetAddress: usdcContract.address,
-        data: usdcContract.interface.encodeFunctionData("transferFrom", [
-          bob.address,
-          widoRouter.address,
-          stolenAmount,
-        ]),
-        amountIndex: -1,
-      },
-    ];
-    const promise = alice.WidoRouter.functions[executeOrderFn](
-      {
-        user: alice.address,
-        fromToken: ETH,
-        toToken: USDC,
-        fromTokenAmount: "1",
-        minToTokenAmount: stolenAmount,
-        nonce: "0",
-        expiration: "0",
-      },
-      steps,
-      30,
-      ZERO_ADDRESS,
-      {
-        value: 1,
-      }
-    );
-    // assert
-    await expect(promise).to.be.revertedWith("ERC20: transfer amount exceeds allowance"); */
+    await router.connect(user1).functions[executeOrderFn](order, swapRoute, 0, ethers.constants.AddressZero);
   });
 });

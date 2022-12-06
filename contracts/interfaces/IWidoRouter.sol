@@ -35,19 +35,14 @@ interface IWidoRouter {
         int32 amountIndex;
     }
 
-    function verifyOrder(
-        Order calldata order,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external view returns (bool);
+    function verifyOrder(Order calldata order, uint8 v, bytes32 r, bytes32 s) external view returns (bool);
 
     function executeOrder(
         Order calldata order,
         Step[] calldata route,
         uint256 feeBps,
         address partner
-    ) external payable returns (uint256 toTokenBalance);
+    ) external returns (uint256 toTokenBalance);
 
     function executeOrder(
         Order calldata order,
@@ -55,7 +50,7 @@ interface IWidoRouter {
         address recipient,
         uint256 feeBps,
         address partner
-    ) external payable returns (uint256 toTokenBalance);
+    ) external returns (uint256 toTokenBalance);
 
     function executeOrderWithSignature(
         Order calldata order,
