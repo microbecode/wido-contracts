@@ -42,7 +42,7 @@ interface IWidoRouter {
         Step[] calldata route,
         uint256 feeBps,
         address partner
-    ) external returns (uint256 toTokenBalance);
+    ) external payable returns (uint256 toTokenBalance);
 
     function executeOrder(
         Order calldata order,
@@ -50,7 +50,7 @@ interface IWidoRouter {
         address recipient,
         uint256 feeBps,
         address partner
-    ) external returns (uint256 toTokenBalance);
+    ) external payable returns (uint256 toTokenBalance);
 
     function executeOrderWithSignature(
         Order calldata order,
